@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
+  let temperatureUnit = "celsius"; // default
+  let currentLocation = null;
+
   function getWeatherCondition(code) {
     const codeMap = {
       0: "Clear",
@@ -15,11 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return codeMap[code] || "Unknown";
   }
 
-  async function fetchWeatherData(
-    latitude,
-    longitude,
-    temperatureUnit = "fahrenheit"
-  ) {
+  async function fetchWeatherData(latitude, longitude) {
     try {
       const response = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&temperature_unit=${temperatureUnit}`
@@ -30,11 +29,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await response.json();
 
       const weather = data.current_weather;
+      console.log("🌤️ Current weather data:", weather);
       if (!weather) throw new Error("No weather data found");
 
       const condition = getWeatherCondition(weather.weathercode);
+      const unitSymbol = temperatureUnit === "celsius" ? "°C" : "°F";
       const element = document.getElementById("condition");
-      element.innerText = `Current weather: ${condition}, ${weather.temperature}°F`;
+      element.innerText = `Current weather: ${condition}, ${weather.temperature}${unitSymbol}`;
     } catch (err) {
       console.error("❌ Weather API error:", err.message);
       alert("Failed to fetch weather data.");
@@ -64,13 +65,33 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  (async () => {
-    const location = await getLocationFromIP();
-    if (location) {
-      fetchWeatherData(location.latitude, location.longitude);
+  async function updateWeather() {
+    if (!currentLocation) {
+      currentLocation = await getLocationFromIP();
+    }
+
+    if (currentLocation) {
+      await fetchWeatherData(
+        currentLocation.latitude,
+        currentLocation.longitude
+      );
     } else {
       document.getElementById("condition").innerText =
         "Could not determine location.";
     }
-  })();
+  }
+
+  // Initial fetch
+  updateWeather();
+
+  // Refresh every 5 minutes
+  setInterval(updateWeather, 5 * 60 * 1000);
+
+  // Toggle button logic
+  const toggleButton = document.getElementById("unitToggle");
+  toggleButton.addEventListener("click", () => {
+    temperatureUnit = temperatureUnit === "celsius" ? "fahrenheit" : "celsius";
+    toggleButton.innerText = temperatureUnit === "celsius" ? "°F" : "°C";
+    updateWeather();
+  });
 });
