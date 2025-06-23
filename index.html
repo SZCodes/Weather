@@ -6,22 +6,19 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <h1 id="title">Current Weather</h1>
+    <h1 id="title">Fetching data...</h1>
 
     <div
       id="weather-emoji"
       aria-label="Weather emoji"
       role="img"
       style="font-size: 8rem; margin: 20px 0"
-    >
-      ☀️
-    </div>
+    ></div>
 
-    <div id="chips-container">
-      <!-- Chips for condition and temperature will appear here -->
+    <div id="controls-container">
+      <div id="chips-container"></div>
+      <button id="unitToggle">°F</button>
     </div>
-
-    <button id="unitToggle">°F</button>
 
     <script src="homepage.js"></script>
   </body>

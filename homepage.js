@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let temperatureUnit = "celsius"; // default
   let currentLocation = null;
 
+  // Map weather codes to descriptive text
   function getWeatherCondition(code) {
     const codeMap = {
       0: "Clear",
@@ -18,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return codeMap[code] || "Unknown";
   }
 
+  // Map weather codes to emoji icons
   function getWeatherEmoji(code) {
     const emojiMap = {
       0: "☀️",
@@ -34,6 +36,24 @@ document.addEventListener("DOMContentLoaded", () => {
     return emojiMap[code] || "❓";
   }
 
+  // Map weather codes to background gradients
+  function getBackgroundForCode(code) {
+    const backgrounds = {
+      0: "linear-gradient(to bottom, #FFF9C4, #FFEE58)", // Clear - yellow
+      1: "linear-gradient(to bottom, #FFFDE7, #FFF9C4)", // Mainly clear - pale yellow
+      2: "linear-gradient(to bottom, #EEE9AE, #DAD7A7)", // Partly cloudy - grey yellow
+      3: "linear-gradient(to bottom, #d7dde8, #757f9a)", // Overcast - grayish
+      45: "linear-gradient(to bottom, #d7d2cc, #304352)", // Fog - misty gray
+      48: "linear-gradient(to bottom, #d7d2cc, #304352)", // Rime fog - same as fog
+      51: "linear-gradient(to bottom, #89f7fe, #66a6ff)", // Drizzle - soft blue
+      61: "linear-gradient(to bottom, #4b79a1, #283e51)", // Rain - dark blue-gray
+      71: "linear-gradient(to bottom, #b6fbff, #83a4d4)", // Snow - soft icy blue
+      80: "linear-gradient(to bottom, #4b79a1, #283e51)", // Showers - same as rain
+    };
+    return backgrounds[code] || "linear-gradient(to bottom, #f9f3f3, #fcefdc)"; // default warm
+  }
+
+  // Modify fetchWeatherData to return weather code and temperature data instead of updating UI
   async function fetchWeatherData(latitude, longitude) {
     try {
       const response = await fetch(
@@ -48,34 +68,91 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("🌤️ Current weather data:", weather);
       if (!weather) throw new Error("No weather data found");
 
-      // Update emoji
-      const emoji = getWeatherEmoji(weather.weathercode);
-      document.getElementById("weather-emoji").innerText = emoji;
-
-      // Update chips for condition and temperature
-      const condition = getWeatherCondition(weather.weathercode);
-      const unitSymbol = temperatureUnit === "celsius" ? "°C" : "°F";
-      const tempText = `${weather.temperature}${unitSymbol}`;
-
-      const chipsContainer = document.getElementById("chips-container");
-      chipsContainer.innerHTML = ""; // clear old chips
-
-      const conditionChip = document.createElement("div");
-      conditionChip.className = "chip";
-      conditionChip.innerText = condition;
-
-      const tempChip = document.createElement("div");
-      tempChip.className = "chip";
-      tempChip.innerText = tempText;
-
-      chipsContainer.appendChild(conditionChip);
-      chipsContainer.appendChild(tempChip);
+      return weather; // return the data, don't update UI here
     } catch (err) {
       console.error("❌ Weather API error:", err.message);
       alert("Failed to fetch weather data.");
+      return null;
     }
   }
 
+  async function updateWeather() {
+    if (!currentLocation) {
+      currentLocation = await getLocationFromIP();
+    }
+
+    if (currentLocation) {
+      const titleEl = document.getElementById("title");
+      const emojiEl = document.getElementById("weather-emoji");
+      const chipsContainer = document.getElementById("chips-container");
+      const toggleButton = document.getElementById("unitToggle");
+
+      // Show loading state
+      titleEl.innerText = "Fetching data...";
+      emojiEl.innerText = "⏳";
+      toggleButton.style.display = "none"; // hide toggle while loading
+      chipsContainer.innerHTML = ""; // clear chips while loading
+
+      // Run fetch + delay in parallel
+      const fetchPromise = fetchWeatherData(
+        currentLocation.latitude,
+        currentLocation.longitude
+      );
+      const delayPromise = sleep(1000);
+
+      const [weather] = await Promise.all([fetchPromise, delayPromise]);
+
+      if (weather) {
+        // Now update UI *after* delay and fetch complete, so emoji and title update simultaneously
+        const emoji = getWeatherEmoji(weather.weathercode);
+        emojiEl.innerText = emoji;
+
+        const condition = getWeatherCondition(weather.weathercode);
+        const unitSymbol = temperatureUnit === "celsius" ? "°C" : "°F";
+        const tempText = `${weather.temperature}${unitSymbol}`;
+
+        chipsContainer.innerHTML = ""; // clear again just in case
+
+        const conditionChip = document.createElement("div");
+        conditionChip.className = "chip";
+        conditionChip.innerText = condition;
+
+        const tempChip = document.createElement("div");
+        tempChip.className = "chip";
+        tempChip.innerText = tempText;
+
+        chipsContainer.appendChild(conditionChip);
+        chipsContainer.appendChild(tempChip);
+
+        titleEl.innerText = "Current Weather";
+        toggleButton.style.display = "inline-block";
+
+        // Update background
+        document.body.style.background = getBackgroundForCode(
+          weather.weathercode
+        );
+      } else {
+        // If fetch failed, show error
+        emojiEl.innerText = "❓";
+        titleEl.innerText = "Could not fetch weather.";
+        chipsContainer.innerHTML = "";
+        toggleButton.style.display = "none";
+        document.body.style.background =
+          "linear-gradient(to bottom, #f9f3f3, #fcefdc)";
+      }
+    } else {
+      // If location fetch failed
+      document.getElementById("weather-emoji").innerText = "❓";
+      document.getElementById("title").innerText =
+        "Could not determine location.";
+      document.getElementById("chips-container").innerHTML = "";
+      document.getElementById("unitToggle").style.display = "none";
+      document.body.style.background =
+        "linear-gradient(to bottom, #f9f3f3, #fcefdc)";
+    }
+  }
+
+  // Get location via IP-based lookup service
   async function getLocationFromIP() {
     try {
       const response = await fetch(
@@ -99,29 +176,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function updateWeather() {
-    if (!currentLocation) {
-      currentLocation = await getLocationFromIP();
-    }
-
-    if (currentLocation) {
-      await fetchWeatherData(
-        currentLocation.latitude,
-        currentLocation.longitude
-      );
-    } else {
-      document.getElementById("weather-emoji").innerText = "❓";
-      const chipsContainer = document.getElementById("chips-container");
-      chipsContainer.innerHTML = `<div class="chip">Could not determine location.</div>`;
-    }
+  // Helper: sleep/delay for given milliseconds
+  async function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  // Initial load
   updateWeather();
 
   // Refresh every 5 minutes
   setInterval(updateWeather, 5 * 60 * 1000);
 
-  // Toggle button logic
+  // Toggle temperature unit button logic
   const toggleButton = document.getElementById("unitToggle");
   toggleButton.addEventListener("click", () => {
     temperatureUnit = temperatureUnit === "celsius" ? "fahrenheit" : "celsius";
