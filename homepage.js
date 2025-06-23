@@ -81,7 +81,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Initial fetch
   updateWeather();
 
   // Refresh every 5 minutes
