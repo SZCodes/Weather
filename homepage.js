@@ -88,10 +88,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const toggleButton = document.getElementById("unitToggle");
 
       // Show loading state
-      titleEl.innerText = "Fetching data...";
-      emojiEl.innerText = "⏳";
+      titleEl.innerText = "Fetching data... ⏳";
+      emojiEl.innerText = "";
       toggleButton.style.display = "none"; // hide toggle while loading
       chipsContainer.innerHTML = ""; // clear chips while loading
+      document.body.style.background = "#ffffff";
+
+      // Add small class for loading
+      titleEl.classList.add("loading-small");
+      emojiEl.classList.add("loading-small");
 
       // Run fetch + delay in parallel
       const fetchPromise = fetchWeatherData(
@@ -103,6 +108,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const [weather] = await Promise.all([fetchPromise, delayPromise]);
 
       if (weather) {
+        // Remove small loading class
+        titleEl.classList.remove("loading-small");
+        emojiEl.classList.remove("loading-small");
+
         // Now update UI *after* delay and fetch complete, so emoji and title update simultaneously
         const emoji = getWeatherEmoji(weather.weathercode);
         emojiEl.innerText = emoji;
@@ -132,6 +141,10 @@ document.addEventListener("DOMContentLoaded", () => {
           weather.weathercode
         );
       } else {
+        // Remove small loading class
+        titleEl.classList.remove("loading-small");
+        emojiEl.classList.remove("loading-small");
+
         // If fetch failed, show error
         emojiEl.innerText = "❓";
         titleEl.innerText = "Could not fetch weather.";
@@ -141,6 +154,12 @@ document.addEventListener("DOMContentLoaded", () => {
           "linear-gradient(to bottom, #f9f3f3, #fcefdc)";
       }
     } else {
+      // Remove small loading class
+      document.getElementById("title").classList.remove("loading-small");
+      document
+        .getElementById("weather-emoji")
+        .classList.remove("loading-small");
+
       // If location fetch failed
       document.getElementById("weather-emoji").innerText = "❓";
       document.getElementById("title").innerText =
