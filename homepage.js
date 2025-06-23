@@ -18,6 +18,22 @@ document.addEventListener("DOMContentLoaded", () => {
     return codeMap[code] || "Unknown";
   }
 
+  function getWeatherEmoji(code) {
+    const emojiMap = {
+      0: "☀️",
+      1: "🌤️",
+      2: "⛅",
+      3: "☁️",
+      45: "🌫️",
+      48: "🌫️",
+      51: "🌦️",
+      61: "🌧️",
+      71: "❄️",
+      80: "🌧️",
+    };
+    return emojiMap[code] || "❓";
+  }
+
   async function fetchWeatherData(latitude, longitude) {
     try {
       const response = await fetch(
@@ -32,10 +48,28 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("🌤️ Current weather data:", weather);
       if (!weather) throw new Error("No weather data found");
 
+      // Update emoji
+      const emoji = getWeatherEmoji(weather.weathercode);
+      document.getElementById("weather-emoji").innerText = emoji;
+
+      // Update chips for condition and temperature
       const condition = getWeatherCondition(weather.weathercode);
       const unitSymbol = temperatureUnit === "celsius" ? "°C" : "°F";
-      const element = document.getElementById("condition");
-      element.innerText = `Current weather: ${condition}, ${weather.temperature}${unitSymbol}`;
+      const tempText = `${weather.temperature}${unitSymbol}`;
+
+      const chipsContainer = document.getElementById("chips-container");
+      chipsContainer.innerHTML = ""; // clear old chips
+
+      const conditionChip = document.createElement("div");
+      conditionChip.className = "chip";
+      conditionChip.innerText = condition;
+
+      const tempChip = document.createElement("div");
+      tempChip.className = "chip";
+      tempChip.innerText = tempText;
+
+      chipsContainer.appendChild(conditionChip);
+      chipsContainer.appendChild(tempChip);
     } catch (err) {
       console.error("❌ Weather API error:", err.message);
       alert("Failed to fetch weather data.");
@@ -76,8 +110,9 @@ document.addEventListener("DOMContentLoaded", () => {
         currentLocation.longitude
       );
     } else {
-      document.getElementById("condition").innerText =
-        "Could not determine location.";
+      document.getElementById("weather-emoji").innerText = "❓";
+      const chipsContainer = document.getElementById("chips-container");
+      chipsContainer.innerHTML = `<div class="chip">Could not determine location.</div>`;
     }
   }
 
